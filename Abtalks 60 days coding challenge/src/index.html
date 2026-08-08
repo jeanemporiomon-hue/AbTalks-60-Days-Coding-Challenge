@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ABTalks 60-Day Coding Challenge | Build Proof-of-Work</title>
+    <meta name="description" content="60 Days. 60 Projects. Build Consistent Proof-of-Work and launch your developer career with ABTalks." />
+
+    <!-- Tailwind CSS v3 via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- React 18 & ReactDOM UMD -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- React Router DOM 6 UMD -->
+    <script src="https://unpkg.com/history@5/umd/history.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-router@6/umd/react-router.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-router-dom@6/umd/react-router-dom.production.min.js" crossorigin></script>
+
+    <!-- Canvas Confetti UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.4/dist/confetti.browser.min.js"></script>
+
+    <!-- Lucide Icons UMD -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Babel Standalone for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              slate: {
+                950: '#090d16',
+                900: '#0f172a',
+                800: '#1e293b',
+              }
+            }
+          }
+        }
+      }
+    </script>
+
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        background-color: #090d16;
+        color: #f8fafc;
+      }
+      
+      ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.8);
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(51, 65, 85, 0.8);
+        border-radius: 9999px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(71, 85, 105, 1);
+      }
+
+      @keyframes pulse-amber {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
+        50% { box-shadow: 0 0 0 8px rgba(245, 158, 11, 0); }
+      }
+      .pulse-amber-ring {
+        animation: pulse-amber 2s infinite;
+      }
+    </style>
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased min-h-screen selection:bg-amber-500/30 selection:text-amber-200">
+    <div id="root"></div>
+
+    <!-- Application Script -->
+    <script type="text/babel">
+      const { useState, useEffect, createContext, useContext } = React;
+      const { BrowserRouter, HashRouter, Routes, Route, useNavigate, useParams, Navigate, useLocation } = ReactRouterDOM;
+
+      // --- MOCK DATA ARCHITECTURE FOR 3 PERSONAS ---
+      const INITIAL_PERSONAS = {
+        personaA: {
+          id: 'personaA',
+          name: 'Alex Vance',
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+          title: 'Persona A: New User',
+          tag: 'Day 1 Starter',
+          badgeColor: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+          currentDay: 1,
+          streak: 0,
+          rank: 'Unranked',
+          track: 'Fullstack Track',
+          hasMissedDays: false,
+          days: Array.from({ length: 60 }, (_, i) => {
+            const dayNum = i + 1;
+            return {
+              day: dayNum,
+              title: dayNum === 1 ? 'Build a Mobile-First Hero Section' : `Challenge Day ${dayNum}`,
+              status: dayNum === 1 ? 'current' : 'upcoming',
+              githubUrl: '',
+              linkedinUrl: '',
+              submittedAt: null
+            };
+          })
+        },
+        personaB: {
+          id: 'personaB',
+          name: 'Sophia Lin',
+          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+          title: 'Persona B: Consistent Builder',
+          tag: '11-Day Active Streak',
+          badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+          currentDay: 12,
+          streak: 11,
+          rank: '#142',
+          track: 'Fullstack Track',
+          hasMissedDays: false,
+          days: Array.from({ length: 60 }, (_, i) => {
+            const dayNum = i + 1;
+            let status = 'upcoming';
+            if (dayNum < 12) status = 'completed';
+            if (dayNum === 12) status = 'current';
+            return {
+              day: dayNum,
+              title: dayNum === 12 ? 'Build a Mobile-First Pricing Component' : `Challenge Day ${dayNum}`,
+              status,
+              githubUrl: dayNum < 12 ? `https://github.com/sophialin/abtalks-day${dayNum}` : '',
+              linkedinUrl: dayNum < 12 ? `https://linkedin.com/in/sophialin/posts/day${dayNum}` : '',
+              submittedAt: dayNum < 12 ? '2026-08-07T18:30:00Z' : null
+            };
+          })
+        },
+        personaC: {
+          id: 'personaC',
+          name: 'Marcus Johnson',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+          title: 'Persona C: Recovering Student',
+          tag: 'Streak Reset • Rebuilding',
+          badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+          currentDay: 15,
+          streak: 0,
+          rank: '#389',
+          track: 'Fullstack Track',
+          hasMissedDays: true,
+          motivationMessage: "Missed days don't define your journey! Complete Day 15 today to reignite your fire streak.",
+          days: Array.from({ length: 60 }, (_, i) => {
+            const dayNum = i + 1;
+            let status = 'upcoming';
+            if (dayNum <= 12) status = 'completed';
+            else if (dayNum === 13 || dayNum === 14) status = 'missed';
+            else if (dayNum === 15) status = 'current';
+            return {
+              day: dayNum,
+              title: dayNum === 12 ? 'Build a Mobile-First Pricing Component' : `Challenge Day ${dayNum}`,
+              status,
+              githubUrl: dayNum <= 12 ? `https://github.com/marcusj/abtalks-day${dayNum}` : '',
+              linkedinUrl: dayNum <= 12 ? `https://linkedin.com/in/marcusj/posts/day${dayNum}` : '',
+              submittedAt: dayNum <= 12 ? '2026-08-04T20:15:00Z' : null
+            };
+          })
+        }
+      };
+
+      const DAY_12_DETAILS = {
+        day: 12,
+        title: 'Build a Mobile-First Pricing Component',
+        track: 'Fullstack / Frontend Track',
+        difficulty: 'Intermediate',
+        estTime: '45 mins',
+        points: 150,
+        description: `Build a highly polished, responsive pricing table component designed specifically for mobile viewports (390px width limit). The component must display tiered subscription plans, billing toggle controls (Monthly vs. Annual with savings badge), and highlighted recommended options.`,
+        requirements: [
+          'Strictly constrained layout designed for 390px viewports without horizontal scroll overflow.',
+          'Interactive Billing Toggle: Swap prices between Monthly and Annual (with a 20% discount calculation).',
+          'Highlight Tier: Visual highlight for the "Pro" plan with a "Most Popular" floating pill badge.',
+          'Feature Matrix List: Bulleted checkmarks for features included in each plan.',
+          'Accessible Controls: High-contrast buttons with crisp focus rings and active press states.',
+          'Proof of Work: Commit your code to GitHub and share a demo update on LinkedIn with screenshot.'
+        ],
+        frictionSolverTemplate: `🚀 Day 12/60 of the ABTalks Coding Challenge complete!
+
+Today I built a Mobile-First Pricing Component optimized strictly for 390px viewports.
+
+Key Features Implemented:
+✨ Dynamic Monthly/Annual billing toggle with 20% savings badge
+📱 Clean zero-overflow mobile responsive layout in Tailwind CSS
+⚡️ Tier highlight micro-animations & accessible focus rings
+
+🔗 GitHub Commit: {githubUrl}
+📌 Track Progress: #ABTalks60Days #BuildInPublic #ProofOfWork #FullstackDev`
+      };
+
+      // --- CONTEXT SETUP ---
+      const PersonaContext = createContext();
+
+      const PersonaProvider = ({ children }) => {
+        const [personas, setPersonas] = useState(INITIAL_PERSONAS);
+        const [activePersonaId, setActivePersonaId] = useState('personaB');
+        const [isFrameMode, setIsFrameMode] = useState(true);
+
+        const activePersona = personas[activePersonaId];
+
+        const switchPersona = (id) => {
+          if (personas[id]) setActivePersonaId(id);
+        };
+
+        const resetPersonas = () => {
+          setPersonas(INITIAL_PERSONAS);
+        };
+
+        const submitDayProof = (dayNum, githubUrl, linkedinUrl) => {
+          setPersonas((prev) => {
+            const currentPersona = prev[activePersonaId];
+            const updatedDays = currentPersona.days.map((dayObj) => {
+              if (dayObj.day === dayNum) {
+                return {
+                  ...dayObj,
+                  status: 'completed',
+                  githubUrl,
+                  linkedinUrl,
+                  submittedAt: new Date().toISOString()
+                };
+              }
+              return dayObj;
+            });
+
+            const completedCount = updatedDays.filter(d => d.status === 'completed').length;
+            const newStreak = currentPersona.streak + 1;
+
+            return {
+              ...prev,
+              [activePersonaId]: {
+                ...currentPersona,
+                streak: newStreak,
+                completedDaysCount: completedCount,
+                days: updatedDays,
+                rank: currentPersona.rank === 'Unranked' ? '#450' : currentPersona.rank
+              }
+            };
+          });
+        };
+
+        return (
+          <PersonaContext.Provider value={{
+            personas,
+            activePersonaId,
+            activePersona,
+            switchPersona,
+            resetPersonas,
+            submitDayProof,
+            isFrameMode,
+            setIsFrameMode
+          }}>
+            {children}
+          </PersonaContext.Provider>
+        );
+      };
+
+      const usePersona = () => useContext(PersonaContext);
+
+      // --- COMPONENTS ---
+
+      // 1. Reviewer Persona Switcher Top Bar
+      const PersonaSwitcher = () => {
+        const { personas, activePersonaId, switchPersona, resetPersonas, isFrameMode, setIsFrameMode } = usePersona();
+
+        return (
+          <header className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur-md border-b border-amber-500/30 px-3 py-2 text-xs shadow-lg">
+            <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 font-mono text-[11px] text-amber-400 uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span className="font-bold">Persona Switcher:</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-lg border border-slate-800">
+                {Object.values(personas).map((p) => {
+                  const isActive = p.id === activePersonaId;
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => switchPersona(p.id)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md transition text-[11px] font-medium cursor-pointer ${
+                        isActive
+                          ? 'bg-amber-500/20 text-amber-200 border border-amber-500/50 shadow-xs'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      }`}
+                    >
+                      <span className="font-bold">{p.title.split(':')[0]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsFrameMode(!isFrameMode)}
+                  className="flex items-center gap-1 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition cursor-pointer text-[11px]"
+                >
+                  <span>{isFrameMode ? '390px Mobile View' : 'Fluid Width'}</span>
+                </button>
+                <button
+                  onClick={resetPersonas}
+                  className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 rounded transition cursor-pointer text-[11px]"
+                >
+                  Reset State
+                </button>
+              </div>
+            </div>
+          </header>
+        );
+      };
+
+      // 2. Mobile Frame Container (390px Viewport)
+      const MobileFrame = ({ children }) => {
+        const { isFrameMode } = usePersona();
+
+        if (!isFrameMode) {
+          return <div className="w-full min-h-screen bg-slate-950">{children}</div>;
+        }
+
+        return (
+          <div className="w-full min-h-[calc(100vh-42px)] bg-slate-950 py-4 px-2 flex justify-center items-start overflow-x-hidden">
+            <div className="w-full max-w-[390px] min-h-[780px] bg-slate-950 border border-slate-800 rounded-[38px] shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_20px_rgba(245,158,11,0.15)] flex flex-col relative overflow-hidden transition-all duration-300">
+              {/* Notch Header */}
+              <div className="w-full bg-slate-950 pt-2.5 pb-1.5 px-6 flex justify-between items-center text-[10px] text-slate-400 font-mono select-none z-40 border-b border-slate-900">
+                <span>9:41</span>
+                <div className="w-20 h-3.5 bg-slate-900 rounded-full flex items-center justify-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-slate-950 border border-slate-800" />
+                </div>
+                <div className="flex items-center gap-1 font-bold text-slate-300">
+                  <span>5G</span>
+                </div>
+              </div>
+
+              <main className="flex-1 overflow-y-auto flex flex-col scroll-smooth">
+                {children}
+              </main>
+            </div>
+          </div>
+        );
+      };
+
+      // 3. Streak Badge Component
+      const StreakBadge = ({ persona }) => {
+        const { streak, hasMissedDays, motivationMessage } = persona;
+
+        if (streak === 0) {
+          return (
+            <div className="bg-gradient-to-br from-amber-950/60 via-slate-900 to-slate-950 border border-amber-500/40 rounded-2xl p-4 shadow-lg">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold">
+                    Streak Status
+                  </div>
+                  <h3 className="text-base font-extrabold text-slate-100 mt-0.5">
+                    0-Day Active Streak
+                  </h3>
+                </div>
+                <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  {hasMissedDays ? 'Recovery Mode' : 'Start Today'}
+                </span>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-slate-800 text-xs text-amber-200/90 leading-snug">
+                <p>⚡ {motivationMessage || "Start your streak today! Submit Day 1 proof of work to spark your fire."}</p>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div className="bg-gradient-to-br from-slate-900 via-amber-950/40 to-slate-950 border border-amber-500/40 rounded-2xl p-4 shadow-[0_0_25px_rgba(245,158,11,0.15)] relative overflow-hidden">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  Active Streak
+                </div>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-orange-400 to-amber-500 tracking-tight">
+                    {streak}
+                  </span>
+                  <span className="text-xs font-bold text-amber-200 uppercase tracking-wide">
+                    {streak === 1 ? 'Day' : 'Days'} Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/40 flex items-center justify-center text-3xl shadow-inner">
+                🔥
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <span className="text-slate-400">Streak Fire Level:</span>
+              <span className="font-semibold text-emerald-400">
+                🔥 Consistent Builder
+              </span>
+            </div>
+          </div>
+        );
+      };
+
+      // 4. Progress Grid Component (60 Micro Squares)
+      const ProgressGrid = ({ days }) => {
+        const navigate = useNavigate();
+        const [hoveredDay, setHoveredDay] = useState(null);
+
+        const completedCount = days.filter((d) => d.status === 'completed').length;
+        const missedCount = days.filter((d) => d.status === 'missed').length;
+
+        const getSquareStyle = (dayObj) => {
+          switch (dayObj.status) {
+            case 'completed':
+              return 'bg-emerald-500 text-slate-950 border-emerald-400 font-bold shadow-[0_0_8px_rgba(16,185,129,0.3)]';
+            case 'missed':
+              return 'bg-rose-600/90 text-white border-rose-500/60 font-bold shadow-[0_0_8px_rgba(244,63,94,0.3)]';
+            case 'current':
+              return 'bg-amber-500/20 text-amber-300 border-2 border-amber-400 font-extrabold pulse-amber-ring shadow-[0_0_12px_rgba(245,158,11,0.5)]';
+            default:
+              return 'bg-slate-900 text-slate-600 border-slate-800';
+          }
+        };
+
+        return (
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-md">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">
+                  60-Day Progress Grid
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {completedCount} Completed • {missedCount} Missed
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-[9px] font-mono">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-xs bg-emerald-500" /> Done</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-xs bg-rose-500" /> Missed</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-xs bg-amber-400" /> Active</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-10 gap-1.5 my-2">
+              {days.map((dayObj) => (
+                <button
+                  key={dayObj.day}
+                  onMouseEnter={() => setHoveredDay(dayObj)}
+                  onMouseLeave={() => setHoveredDay(null)}
+                  onClick={() => navigate(`/day/${dayObj.day}`)}
+                  className={`h-7 rounded-md border flex items-center justify-center text-[11px] font-mono transition-all cursor-pointer ${getSquareStyle(dayObj)} ${dayObj.day === 12 ? 'ring-2 ring-amber-300 ring-offset-1 ring-offset-slate-950' : ''}`}
+                  title={`Day ${dayObj.day}: ${dayObj.title} (${dayObj.status})`}
+                >
+                  {dayObj.status === 'completed' ? '✓' : dayObj.status === 'missed' ? '✕' : dayObj.day}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-400">
+              <span>{hoveredDay ? `Day ${hoveredDay.day}: ${hoveredDay.title}` : 'Tap any square to open task'}</span>
+              <span className="text-emerald-400 font-mono">{Math.round((completedCount / 60) * 100)}%</span>
+            </div>
+          </div>
+        );
+      };
+
+      // 5. Submission Form Component
+      const SubmissionForm = ({ dayNum, dayData, onSubmit }) => {
+        const isCompleted = dayData?.status === 'completed';
+        const [githubUrl, setGithubUrl] = useState(dayData?.githubUrl || '');
+        const [linkedinUrl, setLinkedinUrl] = useState(dayData?.linkedinUrl || '');
+        const [error, setError] = useState('');
+        const [showModal, setShowModal] = useState(false);
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          if (!githubUrl.trim()) {
+            setError('Please input a valid GitHub Commit URL');
+            return;
+          }
+          if (!linkedinUrl.trim()) {
+            setError('Please input a valid LinkedIn Post URL');
+            return;
+          }
+
+          setError('');
+          onSubmit(dayNum, githubUrl, linkedinUrl);
+
+          try {
+            confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          } catch(e){}
+
+          setShowModal(true);
+        };
+
+        return (
+          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider font-mono">
+                Proof of Work Submission
+              </h3>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isCompleted ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+                {isCompleted ? '✓ Completed' : 'Pending'}
+              </span>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                  GitHub Commit URL <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="url"
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value)}
+                  placeholder="https://github.com/username/abtalks-day12-pricing"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-300 mb-1">
+                  LinkedIn Post URL <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  type="url"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  placeholder="https://linkedin.com/in/username/posts/abtalks-day12"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100 font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                />
+              </div>
+
+              {error && <p className="text-[11px] text-rose-400 font-medium">{error}</p>}
+
+              <button
+                type="submit"
+                className={`w-full py-3 rounded-xl font-extrabold text-xs tracking-wide transition cursor-pointer active:scale-98 shadow-md ${
+                  isCompleted
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                    : 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950'
+                }`}
+              >
+                {isCompleted ? 'Update Proof of Work' : 'Submit Proof of Work 🔥'}
+              </button>
+            </form>
+
+            {showModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs">
+                <div className="bg-slate-900 border border-emerald-500/40 rounded-2xl p-5 max-w-xs w-full text-center space-y-3 shadow-2xl">
+                  <div className="text-3xl">🎉</div>
+                  <h4 className="text-base font-bold text-slate-100">Day {dayNum} Submitted!</h4>
+                  <p className="text-xs text-slate-300">
+                    Your proof of work has been recorded. Your active streak has incremented!
+                  </p>
+                  <button
+                    onClick={() => setShowModal(false)}
+                    className="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer"
+                  >
+                    Awesome!
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      };
+
+      // 6. Late-Night Friction Solver Card
+      const FrictionSolverCard = ({ templateText, githubUrl }) => {
+        const formattedText = templateText.replace(
+          '{githubUrl}',
+          githubUrl || 'https://github.com/your-username/abtalks-day12-pricing'
+        );
+        const [text, setText] = useState(formattedText);
+        const [copied, setCopied] = useState(false);
+
+        const handleCopy = () => {
+          navigator.clipboard.writeText(text);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        };
+
+        return (
+          <div className="bg-gradient-to-br from-indigo-950/40 via-slate-900 to-slate-950 border border-indigo-500/30 rounded-2xl p-4 shadow-md space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-100 font-mono">
+                  🌙 Late Night Friction Solver
+                </h3>
+                <p className="text-[10px] text-indigo-300/80">Tired? Copy-paste this LinkedIn post template</p>
+              </div>
+              <span className="px-2 py-0.5 text-[9px] font-mono bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
+                Fast Draft
+              </span>
+            </div>
+
+            <div className="relative">
+              <textarea
+                rows={6}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-mono leading-relaxed focus:outline-none focus:border-indigo-400 resize-none"
+              />
+              <button
+                onClick={handleCopy}
+                className="absolute bottom-3 right-3 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[11px] font-bold transition shadow-md cursor-pointer active:scale-95"
+              >
+                {copied ? '✓ Copied!' : 'Copy Template'}
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // --- PAGES ---
+
+      // Page 1: Landing Page ( / )
+      const LandingPage = () => {
+        const navigate = useNavigate();
+
+        return (
+          <div className="flex-1 flex flex-col justify-between pb-24 relative p-4 space-y-6">
+            <header className="flex items-center justify-between border-b border-slate-900 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center font-bold text-slate-950">
+                  🔥
+                </div>
+                <div>
+                  <h1 className="text-sm font-extrabold text-slate-100 leading-none">
+                    ABTalks <span className="text-amber-400">60-Day</span>
+                  </h1>
+                  <span className="text-[10px] font-mono text-slate-400">Coding Challenge</span>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-xs font-semibold text-amber-400 hover:text-amber-300 transition cursor-pointer"
+              >
+                Dashboard →
+              </button>
+            </header>
+
+            <section className="space-y-3 text-center">
+              <span className="inline-block px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-medium">
+                🏆 Proof-of-Work Accelerator
+              </span>
+
+              <h2 className="text-2xl font-black text-slate-100 leading-tight">
+                60 Days. 60 Projects.<br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400">
+                  Build Consistent Proof-of-Work.
+                </span>
+              </h2>
+
+              <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
+                Stop tutorial hell. Ship one verified code project daily, maintain your fire streak, and build an unshakeable developer portfolio recruiters respect.
+              </p>
+            </section>
+
+            {/* Track Highlights Badges */}
+            <section className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">
+                Track Highlights
+              </h3>
+              <div className="space-y-2">
+                <div className="bg-gradient-to-r from-emerald-500/20 to-teal-500/10 border border-emerald-500/30 rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-400">Fullstack Track</h4>
+                    <p className="text-[10px] font-mono text-slate-400">React • Next.js • Node.js • Tailwind</p>
+                  </div>
+                  <span className="text-[10px] bg-slate-950 px-2 py-0.5 rounded text-slate-300 border border-slate-800">60 Tasks</span>
+                </div>
+
+                <div className="bg-gradient-to-r from-blue-500/20 to-indigo-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-blue-400">Backend Track</h4>
+                    <p className="text-[10px] font-mono text-slate-400">Go • PostgreSQL • Redis • Docker</p>
+                  </div>
+                  <span className="text-[10px] bg-slate-950 px-2 py-0.5 rounded text-slate-300 border border-slate-800">60 Tasks</span>
+                </div>
+
+                <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/10 border border-amber-500/30 rounded-xl p-3 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-amber-400">AI Engineering Track</h4>
+                    <p className="text-[10px] font-mono text-slate-400">Python • LLMs • LangChain • VectorDB</p>
+                  </div>
+                  <span className="text-[10px] bg-slate-950 px-2 py-0.5 rounded text-slate-300 border border-slate-800">60 Tasks</span>
+                </div>
+              </div>
+            </section>
+
+            {/* 3-Step Timeline Explanation */}
+            <section className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider font-mono">
+                How It Works (3 Steps)
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded bg-amber-500/20 text-amber-400 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">01</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-100">Get Daily Task</h4>
+                    <p className="text-[11px] text-slate-400">Real-world project dropped every morning at 8:00 AM.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded bg-amber-500/20 text-amber-400 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">02</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-100">Ship Code & Write Post</h4>
+                    <p className="text-[11px] text-slate-400">Push your GitHub commit and log your build on LinkedIn.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <span className="w-6 h-6 rounded bg-amber-500/20 text-amber-400 text-[11px] font-mono font-bold flex items-center justify-center shrink-0">03</span>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-100">Get Visible to Recruiters</h4>
+                    <p className="text-[11px] text-slate-400">Climb the leaderboard and get matched with hiring partners.</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* Mobile Fixed Sticky CTA */}
+            <div className="fixed bottom-0 left-0 right-0 p-3 bg-slate-950/95 border-t border-slate-800 backdrop-blur-md z-40 max-w-[390px] mx-auto">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="w-full py-3.5 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold text-sm rounded-xl shadow-[0_0_20px_rgba(245,158,11,0.3)] transition transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <span>Commit to the Challenge</span>
+                <span>→</span>
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // Page 2: Student Dashboard ( /dashboard )
+      const DashboardPage = () => {
+        const navigate = useNavigate();
+        const { activePersona } = usePersona();
+
+        const activeDayObj = activePersona.days.find((d) => d.day === activePersona.currentDay) || activePersona.days[11];
+        const completedCount = activePersona.days.filter((d) => d.status === 'completed').length;
+        const progressPercent = Math.round((completedCount / 60) * 100);
+
+        return (
+          <div className="flex-1 p-4 space-y-4 pb-8">
+            <header className="flex items-center justify-between bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 shadow-md">
+              <div className="flex items-center gap-3">
+                <img
+                  src={activePersona.avatar}
+                  alt={activePersona.name}
+                  className="w-11 h-11 rounded-xl object-cover border border-amber-500/40"
+                />
+                <div>
+                  <h2 className="text-sm font-bold text-slate-100">{activePersona.name}</h2>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded border inline-block mt-0.5 ${activePersona.badgeColor}`}>
+                    {activePersona.tag}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 font-mono">
+                <div className="text-[9px] uppercase text-slate-400 font-semibold">Global Rank</div>
+                <div className="text-sm font-extrabold text-amber-300">{activePersona.rank}</div>
+              </div>
+            </header>
+
+            {activePersona.hasMissedDays && (
+              <div className="bg-gradient-to-r from-rose-950/60 via-amber-950/40 to-slate-900 border border-amber-500/40 rounded-xl p-3 text-xs text-amber-200">
+                <h4 className="font-bold text-amber-300">Streak Recovery Active</h4>
+                <p className="text-[11px] text-slate-300 mt-0.5">
+                  You missed Days 13 & 14, but you're back! Complete Day 15 today to reignite your streak.
+                </p>
+              </div>
+            )}
+
+            <StreakBadge persona={activePersona} />
+
+            {/* Current Task Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-lg space-y-3">
+              <div className="flex items-center justify-between text-[10px] font-mono">
+                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 font-bold">
+                  Today's Active Task
+                </span>
+                <span className="text-slate-400">Day {activePersona.currentDay} of 60</span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-100">
+                  {activeDayObj?.title || 'Build a Mobile-First Pricing Component'}
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Build a responsive pricing tier component with monthly/annual billing toggle strictly for 390px viewports.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-mono text-slate-400">
+                  <span>Micro Progress</span>
+                  <span className="text-emerald-400 font-bold">{progressPercent}%</span>
+                </div>
+                <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-amber-400 transition-all duration-500"
+                    style={{ width: `${Math.max(progressPercent, 3)}%` }}
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => navigate(`/day/${activePersona.currentDay}`)}
+                className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl transition cursor-pointer active:scale-98"
+              >
+                View Today's Task (Day {activePersona.currentDay}) →
+              </button>
+            </div>
+
+            <ProgressGrid days={activePersona.days} />
+          </div>
+        );
+      };
+
+      // Page 3: Challenge Day Page ( /day/12 )
+      const DayPage = () => {
+        const { dayNum } = useParams();
+        const navigate = useNavigate();
+        const { activePersona, submitDayProof } = usePersona();
+
+        const targetDayNum = parseInt(dayNum || '12', 10);
+        const dayData = activePersona.days.find((d) => d.day === targetDayNum) || activePersona.days[11];
+        const isCompleted = dayData?.status === 'completed';
+
+        const [isAnnual, setIsAnnual] = useState(true);
+        const [selectedPlan, setSelectedPlan] = useState('pro');
+
+        return (
+          <div className="flex-1 p-4 space-y-4 pb-12">
+            <header className="flex items-center justify-between">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl transition cursor-pointer"
+              >
+                ← Dashboard
+              </button>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-slate-400">Day {targetDayNum} of 60</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${isCompleted ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'}`}>
+                  {isCompleted ? '✓ Completed' : 'Pending'}
+                </span>
+              </div>
+            </header>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-3">
+              <div>
+                <div className="text-[10px] font-mono text-amber-400 font-bold mb-0.5">
+                  {DAY_12_DETAILS.track} • {DAY_12_DETAILS.estTime}
+                </div>
+                <h2 className="text-base font-black text-slate-100">
+                  {DAY_12_DETAILS.title}
+                </h2>
+              </div>
+
+              <p className="text-xs text-slate-300 bg-slate-950/60 border border-slate-800/80 rounded-xl p-3">
+                {DAY_12_DETAILS.description}
+              </p>
+
+              <div className="space-y-1.5">
+                <h3 className="text-xs font-bold text-slate-200 font-mono uppercase">
+                  Requirements Checklist
+                </h3>
+                <ul className="space-y-1.5">
+                  {DAY_12_DETAILS.requirements.map((req, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs text-slate-300">
+                      <span className="text-emerald-400 font-bold">✓</span>
+                      <span>{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Interactive Demo Component */}
+            <div className="bg-slate-950 border border-amber-500/30 rounded-2xl p-4 shadow-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="text-xs font-bold text-amber-300 font-mono">
+                  Live Component Preview (390px Pricing Tier)
+                </span>
+              </div>
+
+              <div className="flex justify-center items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800 w-fit mx-auto">
+                <button
+                  onClick={() => setIsAnnual(false)}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer ${!isAnnual ? 'bg-amber-500 text-slate-950' : 'text-slate-400'}`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => setIsAnnual(true)}
+                  className={`px-3 py-1 text-[11px] font-bold rounded-lg transition cursor-pointer ${isAnnual ? 'bg-amber-500 text-slate-950' : 'text-slate-400'}`}
+                >
+                  Annual (20% OFF)
+                </button>
+              </div>
+
+              <div className="p-3.5 rounded-xl border border-amber-400 bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 space-y-2">
+                <div className="flex justify-between items-baseline">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-100">Pro Developer</h4>
+                    <p className="text-[10px] text-slate-400">For daily challenge builders</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-lg font-black text-amber-300">${isAnnual ? '15' : '19'}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">/mo</span>
+                  </div>
+                </div>
+                <ul className="text-[11px] text-slate-300 space-y-1 border-t border-slate-800 pt-2">
+                  <li>✓ Unlimited daily project submissions</li>
+                  <li>✓ Automated GitHub commit verification</li>
+                </ul>
+              </div>
+            </div>
+
+            <SubmissionForm dayNum={targetDayNum} dayData={dayData} onSubmit={submitDayProof} />
+
+            <FrictionSolverCard
+              templateText={DAY_12_DETAILS.frictionSolverTemplate}
+              githubUrl={dayData?.githubUrl}
+            />
+          </div>
+        );
+      };
+
+      // Main App Enclosure
+      const App = () => {
+        return (
+          <PersonaProvider>
+            <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased">
+              <PersonaSwitcher />
+              <MobileFrame>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/day/:dayNum" element={<DayPage />} />
+                  <Route path="/day" element={<Navigate to="/day/12" replace />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </MobileFrame>
+            </div>
+          </PersonaProvider>
+        );
+      };
+
+      // Render Application into Root
+      const rootElement = document.getElementById('root');
+      const root = ReactDOM.createRoot(rootElement);
+      root.render(
+        <HashRouter>
+          <App />
+        </HashRouter>
+      );
+    </script>
+  </body>
+</html>
